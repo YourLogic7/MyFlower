@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f6f1e7">
+    <meta name="description" content="Pilih satu bunga, beri nama, dan rawat setiap hari di Kebun Kecil.">
+    <title>Kebun Kecil — teman tumbuhmu</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="game.js" defer></script>
+  </head>
+  <body>
+    <main class="page-shell">
+      <header class="topbar">
+        <a class="brand" href="#" aria-label="Kebun Kecil, beranda">
+          <span class="brand-mark" aria-hidden="true">✿</span>
+          <span>kebun kecil<span class="brand-period">.</span></span>
+        </a>
+        <div class="top-note"><span class="online-dot"></span> kebunmu, ruang kecil untuk tumbuh</div>
+        <div class="day-chip" id="today-label" aria-live="polite"></div>
+      </header>
+
+      <section class="intro">
+        <div class="eyebrow"><span aria-hidden="true">✦</span> TAMAN MINI PRIBADIMU</div>
+        <h1>Hal kecil yang<br><span>tumbuh besar.</span></h1>
+        <p>Satu bunga, sedikit perhatian setiap hari. Yuk, mulai kebun kecilmu sendiri.</p>
+      </section>
+
+      <section class="game-shell" aria-label="Permainan merawat bunga">
+        <div class="game-heading">
+          <div>
+            <span class="section-kicker" id="section-kicker">LANGKAH 01 / PILIH TEMAN</span>
+            <h2 id="section-title">Siapa yang mau kamu rawat?</h2>
+          </div>
+          <span class="one-flower-note"><span aria-hidden="true">♡</span> satu bunga saja, ya</span>
+        </div>
+
+        <div id="setup-view">
+          <div class="flower-grid" id="flower-grid" aria-label="Pilihan bunga"></div>
+          <div class="setup-footer">
+            <label class="name-field">
+              <span class="field-label">Nama bungamu</span>
+              <span class="input-wrap"><span aria-hidden="true">✎</span><input id="flower-name" maxlength="18" value="Bubu" aria-label="Nama bunga" autocomplete="off" placeholder="contoh: Bubu"></span>
+            </label>
+            <button class="primary-button" id="plant-button" type="button" disabled>
+              Tanam benih <span aria-hidden="true">→</span>
+            </button>
+          </div>
+          <p class="tiny-note"><span aria-hidden="true">☼</span> Bunga tumbuh sempurna dalam 15 hari. Jangan lupa menyiram, ya!</p>
+        </div>
+
+        <div id="garden-view" class="garden-view" hidden>
+          <div class="garden-main">
+            <div class="scene" id="scene">
+              <div class="scene-sun" aria-hidden="true"></div>
+              <div class="scene-cloud cloud-one" aria-hidden="true"></div>
+              <div class="scene-cloud cloud-two" aria-hidden="true"></div>
+              <span class="scene-sparkle sparkle-one" aria-hidden="true">✦</span>
+              <span class="scene-sparkle sparkle-two" aria-hidden="true">✧</span>
+              <div id="flower-art" class="flower-art" aria-label="Ilustrasi bunga"></div>
+              <div class="ground"></div>
+              <div class="scene-caption" id="scene-caption"></div>
+            </div>
+            <div class="flower-summary">
+              <div>
+                <div class="mood-label"><span class="mood-dot" id="mood-dot"></span><span id="mood-text">Segar dan bahagia</span></div>
+                <h3 id="active-flower-name">Bubu</h3>
+                <p id="active-flower-kind">Bunga matahari · hari ke-1</p>
+              </div>
+              <button class="text-button" id="rename-button" type="button" aria-label="Ganti nama bunga">✎ ganti nama</button>
+            </div>
+          </div>
+
+          <aside class="care-panel">
+            <div class="care-title">
+              <span class="care-icon" aria-hidden="true">♧</span>
+              <div><span class="section-kicker">PERAWATAN HARI INI</span><h3>Bagaimana kabarnya?</h3></div>
+            </div>
+            <div class="water-card">
+              <div class="water-card-top">
+                <span class="water-drop" aria-hidden="true">💧</span>
+                <div><strong>Waktunya minum!</strong><span id="water-status">Siram agar tetap ceria</span></div>
+              </div>
+              <button class="water-button" id="water-button" type="button">
+                <span aria-hidden="true">💧</span> <span id="water-button-label">Siram bungaku</span>
+              </button>
+            </div>
+
+            <div class="growth-block">
+              <div class="growth-heading"><span>Perjalanan tumbuh</span><strong id="growth-count">0 / 15 hari</strong></div>
+              <div class="progress-track" role="progressbar" id="growth-progress" aria-label="Perjalanan tumbuh" aria-valuemin="0" aria-valuemax="15" aria-valuenow="0"><span id="growth-bar"></span></div>
+              <div class="milestones"><span>🌱 Benih</span><span>🌼 Mekar</span></div>
+            </div>
+
+            <div class="care-stats">
+              <div class="stat"><span class="stat-icon">☀</span><span><strong id="streak-count">1 hari</strong><small>rajin menyiram</small></span></div>
+              <div class="stat"><span class="stat-icon">♡</span><span><strong id="dry-count">0 hari</strong><small>tanpa air</small></span></div>
+            </div>
+
+            <div class="daily-tip"><span aria-hidden="true">✦</span><p id="daily-tip">Sedikit air dan perhatian darimu bikin hari bungamu lebih cerah.</p></div>
+            <button class="reset-button" id="reset-button" type="button">Mulai kebun baru</button>
+          </aside>
+        </div>
+        <div id="toast" class="toast" role="status" aria-live="polite"></div>
+      </section>
+
+      <footer class="footer"><span>dibuat dengan <span class="heart">♥</span> dan sedikit sinar matahari</span><span>tak perlu buru-buru — semua tumbuh pada waktunya</span></footer>
+    </main>
+  </body>
+</html>
