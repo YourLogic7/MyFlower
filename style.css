@@ -79,6 +79,7 @@ button { cursor: pointer; }
 .scene > .flower-art { pointer-events: auto; }
 .scene::before { content: ''; position: absolute; inset: auto -7% -54px; height: 108px; border-radius: 50% 50% 0 0; background: #d6e5cb; }
 .scene.is-watering { cursor: url('/watering-can.svg') 8 14, crosshair; box-shadow: inset 0 0 0 2px rgba(71, 120, 89, .22); }
+.scene.is-petting { cursor: url('/petting-hand.svg') 12 2, pointer; box-shadow: inset 0 0 0 2px rgba(71, 120, 89, .18); }
 .scene.celebrate::after { content: '💦'; position: absolute; z-index: 3; left: calc(50% + 43px); top: 36%; pointer-events: none; font-size: 38px; animation: water-splash .85s ease-out both; }
 .scene-sun { position: absolute; width: 33px; height: 33px; right: 44px; top: 30px; border-radius: 50%; background: #f6d990; box-shadow: 0 0 0 8px rgba(249, 218, 147, .18); animation: sun-glow 3s ease-in-out infinite; }
 .scene-cloud { position: absolute; width: 43px; height: 11px; border-radius: 12px; background: rgba(255,255,255,.66); }
@@ -93,8 +94,14 @@ button { cursor: pointer; }
 .flower-art { position: relative; z-index: 1; display: block; width: 224px; height: 224px; margin-top: 8px; padding: 0; border: 0; color: inherit; background: transparent; cursor: inherit; animation: bob 2.8s ease-in-out infinite; image-rendering: pixelated; }
 .flower-art:disabled { opacity: 1; }
 .flower-art.is-watering { outline: 2px dashed rgba(71, 120, 89, .5); outline-offset: 7px; border-radius: 12px; }
+.flower-art.is-petting { outline: 2px dashed rgba(71, 120, 89, .38); outline-offset: 7px; border-radius: 12px; }
+.flower-art.just-petted { animation: laugh-bounce .42s ease-in-out 2; }
 .watering-hint { position: absolute; z-index: 3; top: 16px; left: 50%; transform: translateX(-50%); padding: 8px 12px; border: 1px solid rgba(71, 120, 89, .16); border-radius: 20px; color: #426d4c; background: rgba(255, 254, 250, .88); font-size: 11px; font-weight: 800; white-space: nowrap; pointer-events: none; }
 .flower-art svg { width: 100%; height: 100%; overflow: visible; shape-rendering: crispEdges; filter: drop-shadow(0 7px 3px rgba(50, 76, 47, .12)); }
+.eye-pupil { transform: translate(var(--look-x, 0), var(--look-y, 0)); transition: transform .12s ease-out; }
+.flower-accessory { position: absolute; z-index: 2; top: 12%; left: 50%; transform: translateX(-50%); font-size: 29px; line-height: 1; filter: drop-shadow(0 2px 1px rgba(50, 76, 47, .15)); pointer-events: none; }
+.accessory-bow { top: 32%; left: 22%; transform: translateX(-50%) rotate(-15deg); }
+.accessory-flower-clip { top: 27%; left: 70%; font-size: 24px; }
 .flower-art.is-wilted { animation: droop 2s ease-in-out infinite alternate; filter: saturate(.55); transform-origin: 50% 80%; }
 .flower-art.is-dead { animation: none; filter: grayscale(.72) saturate(.4); }
 .ground { position: absolute; width: 205px; height: 20px; bottom: 40px; z-index: 0; border-radius: 50%; background: rgba(104, 139, 86, .13); }
@@ -125,6 +132,32 @@ button { cursor: pointer; }
 .water-button.is-active { background: #345b3e; box-shadow: 0 0 0 3px rgba(71, 120, 89, .14); animation: pot-ready .8s ease-in-out infinite alternate; }
 .water-button span:first-child { margin-right: 4px; }
 .water-button img { width: 17px; height: 17px; margin-right: 6px; vertical-align: middle; }
+.pet-button { margin-top: 9px; color: #527b55; background: #edf4e9; }
+.pet-button:hover:not(:disabled) { color: #fff; }
+.pet-button.is-active { color: #fff; background: #345b3e; }
+.customize-panel { margin-top: 16px; padding: 13px 11px 11px; border: 1px solid #eeede4; border-radius: 10px; background: #fffefa; }
+.customize-panel h4 { display: flex; justify-content: space-between; margin: 0 0 12px; color: #45684b; font-size: 11px; }
+.customize-panel h4 span { color: #d7ad5e; }
+.customize-group + .customize-group { margin-top: 12px; }
+.customize-label { display: block; margin-bottom: 6px; color: #879087; font-size: 9px; font-weight: 800; }
+.pot-type-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; }
+.pot-type-option { min-height: 48px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 5px 2px; border: 1px solid #eeede5; border-radius: 7px; color: #748076; background: #fff; font-size: 8px; }
+.pot-type-option.selected, .accessory-option.selected { border-color: #8db18a; color: #355b3e; background: #f2f7ef; box-shadow: inset 0 0 0 1px #8db18a; }
+.pot-type-preview { display: block; width: 17px; height: 14px; border: 2px solid #a96347; border-top-width: 3px; border-radius: 2px 2px 5px 5px; background: #c97851; }
+.pot-preview-round { width: 17px; border-radius: 4px 4px 8px 8px; }
+.pot-preview-square { border-radius: 1px; }
+.pot-color-options { display: flex; flex-wrap: wrap; gap: 8px; }
+.pot-color-option { display: grid; place-items: center; width: 24px; height: 24px; padding: 3px; border: 1px solid transparent; border-radius: 50%; background: transparent; }
+.pot-color-option > span { width: 16px; height: 16px; border: 1px solid rgba(38, 61, 51, .12); border-radius: 50%; }
+.pot-color-option.selected { border-color: #598962; box-shadow: 0 0 0 2px #e9f1e5; }
+.accessory-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; }
+.accessory-option { min-height: 30px; display: flex; align-items: center; gap: 5px; padding: 5px 7px; border: 1px solid #eeede5; border-radius: 7px; color: #748076; background: #fff; font-size: 8px; text-align: left; }
+.accessory-option > span { min-width: 14px; font-size: 12px; text-align: center; }
+.face-toggle { width: 100%; min-height: 32px; display: flex; align-items: center; gap: 7px; margin-top: 11px; padding: 6px 8px; border: 1px solid #eeede5; border-radius: 7px; color: #748076; background: #fff; font-size: 9px; text-align: left; }
+.face-toggle.selected { border-color: #d8e6d3; color: #45684b; background: #f4f8ef; }
+.face-toggle span { font-size: 14px; }
+.pot-type-option:focus-visible, .pot-color-option:focus-visible, .accessory-option:focus-visible, .face-toggle:focus-visible { outline: 2px solid #6f9c72; outline-offset: 2px; }
+.pet-reaction { position: absolute; z-index: 3; top: 67px; left: 50%; color: #c45e74; font-size: 14px; font-weight: 900; pointer-events: none; animation: reaction-pop .85s ease-out both; }
 .growth-block { margin-top: 17px; }
 .growth-heading { display: flex; justify-content: space-between; gap: 7px; color: #748076; font-size: 10px; }
 .growth-heading strong { color: #45684b; font-family: 'DM Mono', monospace; font-size: 9px; font-weight: 500; }
@@ -176,6 +209,8 @@ button { cursor: pointer; }
 @keyframes pop { 0% { transform: scale(.8); opacity: 0; } 75% { transform: scale(1.12); } 100% { transform: scale(1); opacity: 1; } }
 @keyframes water-splash { 0% { opacity: 0; transform: scale(.45) translateY(12px); } 25% { opacity: 1; } 100% { opacity: 0; transform: scale(1.2) translateY(-34px); } }
 @keyframes pot-ready { to { box-shadow: 0 0 0 5px rgba(71, 120, 89, .08); } }
+@keyframes laugh-bounce { 0%, 100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-8px) rotate(-2deg); } }
+@keyframes reaction-pop { 0% { opacity: 0; transform: translate(-50%, 8px) scale(.8); } 20%, 70% { opacity: 1; transform: translate(-50%, 0) scale(1); } 100% { opacity: 0; transform: translate(-50%, -8px) scale(1.08); } }
 .celebrate .flower-art { animation: pop .55s ease-out, bob 2.8s .55s ease-in-out infinite; }
 .celebrate .scene-sparkle { animation-duration: .65s; }
 

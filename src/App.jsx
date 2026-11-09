@@ -13,6 +13,28 @@ const flowers = [
   { id: 'poppy', name: 'Poppy', emoji: '🌺', petal: '#ef695f', light: '#ff9a7a', dark: '#bd484c', center: '#443d38' },
 ];
 
+const potTypes = [
+  { id: 'classic', name: 'Klasik' },
+  { id: 'round', name: 'Bulat' },
+  { id: 'square', name: 'Kotak' },
+];
+
+const potColors = [
+  { id: 'terracotta', name: 'Terakota', main: '#c97851', light: '#e69b70', shadow: '#96533e' },
+  { id: 'mint', name: 'Mint', main: '#72a77b', light: '#a5ce9e', shadow: '#4f7d5b' },
+  { id: 'lavender', name: 'Lavender', main: '#9a82be', light: '#c1ace0', shadow: '#705c94' },
+  { id: 'sky', name: 'Biru langit', main: '#69a8be', light: '#a4d5e0', shadow: '#457487' },
+  { id: 'butter', name: 'Kuning lembut', main: '#d8b456', light: '#f0d47a', shadow: '#a58036' },
+  { id: 'rose', name: 'Merah muda', main: '#d88796', light: '#f2b1ba', shadow: '#a85f70' },
+];
+
+const accessories = [
+  { id: 'none', name: 'Tanpa aksesori', emoji: '—' },
+  { id: 'bow', name: 'Pita', emoji: '🎀' },
+  { id: 'crown', name: 'Mahkota', emoji: '👑' },
+  { id: 'flower-clip', name: 'Jepit bunga', emoji: '🌼' },
+];
+
 const petalShapes = {
   sunflower: [[7, 2], [8, 2], [5, 3], [6, 3], [9, 3], [10, 3], [4, 4], [5, 4], [10, 4], [11, 4], [4, 5], [5, 5], [10, 5], [11, 5], [5, 6], [6, 6], [9, 6], [10, 6], [6, 7], [7, 7], [8, 7], [9, 7]],
   rose: [[7, 2], [8, 2], [6, 3], [7, 3], [8, 3], [9, 3], [5, 4], [6, 4], [9, 4], [10, 4], [5, 5], [6, 5], [9, 5], [10, 5], [6, 6], [7, 6], [8, 6], [9, 6], [6, 7], [7, 7], [8, 7], [9, 7]],
@@ -43,6 +65,10 @@ function loadLegacyGarden() {
     if (!saved || typeof saved !== 'object' || !flowers.some((flower) => flower.id === saved.flowerId)) return null;
     if (typeof saved.name !== 'string' || typeof saved.plantedAt !== 'string' || typeof saved.lastWatered !== 'string') return null;
     saved.waterDates = Array.isArray(saved.waterDates) ? saved.waterDates.filter((date) => typeof date === 'string') : [saved.lastWatered];
+    saved.potType = potTypes.some((pot) => pot.id === saved.potType) ? saved.potType : 'classic';
+    saved.potColor = potColors.some((color) => color.id === saved.potColor) ? saved.potColor : 'terracotta';
+    saved.accessory = accessories.some((item) => item.id === saved.accessory) ? saved.accessory : 'none';
+    saved.faceEnabled = typeof saved.faceEnabled === 'boolean' ? saved.faceEnabled : true;
     return saved;
   } catch (error) {
     console.error('Progres kebun tidak dapat dibaca dari penyimpanan browser.', error);
@@ -107,16 +133,23 @@ function calculateStreak(garden) {
   return streak;
 }
 
-function getFlowerPixels(flower, stage, condition) {
+function getFlowerPixels(flower, stage, condition, garden) {
   const pixels = [];
   const put = (x, y, color) => pixels.push([x, y, color]);
-  const soil = condition.dead ? '#7c6757' : '#9a7656';
-  const soilLight = condition.dead ? '#8a786a' : '#b28a61';
+  const potColor = potColors.find((item) => item.id === garden.potColor) || potColors[0];
+  const potRows = garden.potType === 'round'
+    ? [[5, 10], [4, 11], [5, 10]]
+    : garden.potType === 'square'
+      ? [[4, 11], [4, 11], [4, 11]]
+      : [[4, 11], [5, 10], [6, 9]];
 
-  [[5, 13], [6, 13], [7, 13], [8, 13], [9, 13], [10, 13],
-    [4, 14], [5, 14], [6, 14], [7, 14], [8, 14], [9, 14], [10, 14], [11, 14],
-    [5, 15], [6, 15], [7, 15], [8, 15], [9, 15], [10, 15]].forEach(([x, y]) => put(x, y, soil));
-  [[5, 13], [6, 13], [9, 13], [10, 13], [5, 14], [10, 14]].forEach(([x, y]) => put(x, y, soilLight));
+  potRows.forEach(([start, end], row) => {
+    for (let x = start; x <= end; x += 1) {
+      const edge = x === start || x === end;
+      const color = row === 0 ? potColor.light : edge || row === 2 ? potColor.shadow : potColor.main;
+      put(x, 13 + row, color);
+    }
+  });
 
   if (stage === 'seed') {
     [[7, 12], [8, 12], [7, 11]].forEach(([x, y]) => put(x, y, '#a4763c'));
@@ -153,21 +186,35 @@ function getFlowerPixels(flower, stage, condition) {
   [[7, 5], [8, 5], [7, 6], [8, 6]].forEach(([x, y]) => put(x, y, flower.center));
   [[7, 5], [8, 5]].forEach(([x, y]) => put(x, y, flower.dark));
   put(7, 6, flower.light);
-  if (!condition.dead) {
-    put(7, 5, '#fffdf0');
-    put(8, 5, '#fffdf0');
-    put(7, 6, '#624b3c');
-    put(8, 6, '#624b3c');
-  }
   return pixels;
 }
 
-function PixelFlower({ flower, stage, condition }) {
+function PixelFlower({ flower, stage, condition, garden, petting }) {
+  const showFace = !condition.dead && stage === 'bloom' && (garden.faceEnabled !== false || petting);
   return (
     <svg viewBox="0 0 128 128" role="img" aria-label={`${flower.name} pixel-art yang sedang tumbuh`}>
-      {getFlowerPixels(flower, stage, condition).map(([x, y, color], index) => (
+      {getFlowerPixels(flower, stage, condition, garden).map(([x, y, color], index) => (
         <rect key={index} x={x * 8} y={y * 8} width="8" height="8" fill={color} />
       ))}
+      {showFace && (
+        <g className={`flower-face${petting ? ' laughing' : ''}`} aria-hidden="true">
+          {petting ? (
+            <>
+              <path d="M55 44 Q59 40 63 44 M65 44 Q69 40 73 44" fill="none" stroke="#49352d" strokeWidth="2.5" strokeLinecap="round" />
+              <path d="M59 51 Q64 60 69 51 Q64 54 59 51Z" fill="#8f3f53" stroke="#49352d" strokeWidth="1.5" strokeLinejoin="round" />
+              <path d="M62 55 Q64 57 66 55" fill="none" stroke="#f4a1a0" strokeWidth="1.5" strokeLinecap="round" />
+            </>
+          ) : (
+            <>
+              <ellipse cx="59" cy="44" rx="3.3" ry="4.3" fill="#fffdf0" />
+              <ellipse cx="69" cy="44" rx="3.3" ry="4.3" fill="#fffdf0" />
+              <circle className="eye-pupil" cx="60" cy="45" r="1.7" fill="#49352d" />
+              <circle className="eye-pupil" cx="70" cy="45" r="1.7" fill="#49352d" />
+              <path d="M60 52 Q64 56 68 52 Q64 54 60 52Z" fill="#c65b66" stroke="#49352d" strokeWidth="1" strokeLinejoin="round" />
+            </>
+          )}
+        </g>
+      )}
     </svg>
   );
 }
@@ -196,6 +243,8 @@ function App() {
   const [selectedFlower, setSelectedFlower] = useState(null);
   const [flowerName, setFlowerName] = useState('Bubu');
   const [wateringMode, setWateringMode] = useState(false);
+  const [pettingMode, setPettingMode] = useState(false);
+  const [petting, setPetting] = useState(false);
   const [today, setToday] = useState(localDateKey);
   const [toast, setToast] = useState(null);
   const [celebrating, setCelebrating] = useState(false);
@@ -213,6 +262,8 @@ function App() {
   const [authError, setAuthError] = useState('');
   const toastTimer = useRef(null);
   const celebrateTimer = useRef(null);
+  const petTimer = useRef(null);
+  const flowerArtRef = useRef(null);
   const savePromiseRef = useRef(null);
   const hydrated = useRef(false);
   const isSignedIn = Boolean(user);
@@ -345,12 +396,43 @@ function App() {
   useEffect(() => () => {
     window.clearTimeout(toastTimer.current);
     window.clearTimeout(celebrateTimer.current);
+    window.clearTimeout(petTimer.current);
   }, []);
 
   function markGardenChanged(nextGarden) {
     setGarden(nextGarden);
     setSaveVersion((version) => version + 1);
     setSaveStatus('saving');
+  }
+
+  function updateCustomization(key, value) {
+    markGardenChanged((current) => ({ ...current, [key]: value }));
+  }
+
+  function trackFlowerPointer(event) {
+    const flowerArt = flowerArtRef.current;
+    if (!flowerArt) return;
+    const bounds = flowerArt.getBoundingClientRect();
+    const horizontal = ((event.clientX - bounds.left) / bounds.width - 0.5) * 2;
+    const vertical = ((event.clientY - bounds.top) / bounds.height - 0.5) * 2;
+    flowerArt.style.setProperty('--look-x', `${Math.max(-2.2, Math.min(2.2, horizontal * 2.5))}px`);
+    flowerArt.style.setProperty('--look-y', `${Math.max(-2, Math.min(2, vertical * 2))}px`);
+  }
+
+  function resetFlowerGaze() {
+    flowerArtRef.current?.style.setProperty('--look-x', '0px');
+    flowerArtRef.current?.style.setProperty('--look-y', '0px');
+  }
+
+  function interactWithFlower() {
+    if (wateringMode) {
+      waterFlower();
+      return;
+    }
+    if (!pettingMode) return;
+    setPetting(true);
+    window.clearTimeout(petTimer.current);
+    petTimer.current = window.setTimeout(() => setPetting(false), 850);
   }
 
   async function submitAuth(event) {
@@ -378,6 +460,7 @@ function App() {
       await requestAuth('logout', {});
       setUser(null);
       setWateringMode(false);
+      setPettingMode(false);
     } catch (error) {
       showToast(error.message || 'Tidak dapat keluar dari akun.', true);
     }
@@ -393,8 +476,13 @@ function App() {
       plantedAt: date,
       lastWatered: date,
       waterDates: [date],
+      potType: 'classic',
+      potColor: 'terracotta',
+      accessory: 'none',
+      faceEnabled: true,
     });
     setWateringMode(false);
+    setPettingMode(false);
     showToast(`${name} sudah ditanam dan mendapat siraman pertama! Yuk tumbuh bersama 🌱💧`);
   }
 
@@ -415,6 +503,7 @@ function App() {
     }));
     setCelebrating(true);
     setWateringMode(false);
+    setPettingMode(false);
     window.clearTimeout(celebrateTimer.current);
     celebrateTimer.current = window.setTimeout(() => setCelebrating(false), 800);
     showToast(`Yay! ${garden.name} jadi segar lagi berkat kamu 💧`);
@@ -434,6 +523,7 @@ function App() {
       await requestProgress('DELETE');
       setGarden(null);
       setWateringMode(false);
+      setPettingMode(false);
       setSelectedFlower(null);
       setFlowerName('Bubu');
       setSaveVersion(0);
@@ -616,21 +706,34 @@ function App() {
         ) : (
           <div className="garden-view">
             <div className="garden-main">
-              <div className={`scene${celebrating ? ' celebrate' : ''}${wateringMode ? ' is-watering' : ''}`}>
+              <div
+                className={`scene${celebrating ? ' celebrate' : ''}${wateringMode ? ' is-watering' : ''}${pettingMode ? ' is-petting' : ''}${petting ? ' petting' : ''}`}
+                onPointerMove={trackFlowerPointer}
+                onPointerLeave={resetFlowerGaze}
+              >
                 <div className="scene-sun" aria-hidden="true" />
                 <div className="scene-cloud cloud-one" aria-hidden="true" />
                 <div className="scene-cloud cloud-two" aria-hidden="true" />
                 <span className="scene-sparkle sparkle-one" aria-hidden="true">✦</span>
                 <span className="scene-sparkle sparkle-two" aria-hidden="true">✧</span>
-                {wateringMode && <span className="watering-hint">Klik bunganya untuk menyiram</span>}
+                {(wateringMode || pettingMode) && (
+                  <span className="watering-hint">{wateringMode ? 'Klik bunganya untuk menyiram' : 'Arahkan kursor, lalu elus bunganya'}</span>
+                )}
+                {petting && <span className="pet-reaction">Hehe! ♡</span>}
                 <button
-                  className={`flower-art${condition.wilted ? ' is-wilted' : ''}${condition.dead ? ' is-dead' : ''}${wateringMode ? ' is-watering' : ''}`}
+                  ref={flowerArtRef}
+                  className={`flower-art${condition.wilted ? ' is-wilted' : ''}${condition.dead ? ' is-dead' : ''}${wateringMode ? ' is-watering' : ''}${pettingMode ? ' is-petting' : ''}${petting ? ' just-petted' : ''}`}
                   type="button"
-                  disabled={!wateringMode}
-                  aria-label={`Siram ${garden.name}`}
-                  onClick={waterFlower}
+                  disabled={!wateringMode && (!pettingMode || condition.dead)}
+                  aria-label={wateringMode ? `Siram ${garden.name}` : `Elus ${garden.name}`}
+                  onClick={interactWithFlower}
                 >
-                  <PixelFlower flower={flower} stage={stage} condition={condition} />
+                  <PixelFlower flower={flower} stage={stage} condition={condition} garden={garden} petting={petting} />
+                  {garden.accessory && garden.accessory !== 'none' && (
+                    <span className={`flower-accessory accessory-${garden.accessory}`} aria-hidden="true">
+                      {accessories.find((item) => item.id === garden.accessory)?.emoji}
+                    </span>
+                  )}
                 </button>
                 <div className="ground" />
                 <div className="scene-caption">{sceneCaption}</div>
@@ -666,6 +769,7 @@ function App() {
                   onClick={() => {
                     const nextMode = !wateringMode;
                     setWateringMode(nextMode);
+                    setPettingMode(false);
                     if (nextMode) showToast('Klik bunganya untuk menyiram 💧');
                   }}
                 >
@@ -673,6 +777,86 @@ function App() {
                   <span>{condition.dead ? 'Bunganya sudah beristirahat' : wateredToday ? 'Sudah disiram hari ini!' : wateringMode ? 'Batalkan menyiram' : 'Ambil pot siram'}</span>
                 </button>
               </div>
+
+              <section className="customize-panel" aria-label="Kustomisasi bunga">
+                <h4>Hias bungamu <span aria-hidden="true">✦</span></h4>
+                <div className="customize-group">
+                  <span className="customize-label">Jenis pot</span>
+                  <div className="pot-type-options">
+                    {potTypes.map((pot) => (
+                      <button
+                        key={pot.id}
+                        className={`pot-type-option${(garden.potType || 'classic') === pot.id ? ' selected' : ''}`}
+                        type="button"
+                        aria-pressed={(garden.potType || 'classic') === pot.id}
+                        onClick={() => updateCustomization('potType', pot.id)}
+                      >
+                        <span className={`pot-type-preview pot-preview-${pot.id}`} aria-hidden="true" />
+                        {pot.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="customize-group">
+                  <span className="customize-label">Warna pot</span>
+                  <div className="pot-color-options">
+                    {potColors.map((color) => (
+                      <button
+                        key={color.id}
+                        className={`pot-color-option${(garden.potColor || 'terracotta') === color.id ? ' selected' : ''}`}
+                        type="button"
+                        aria-label={color.name}
+                        aria-pressed={(garden.potColor || 'terracotta') === color.id}
+                        title={color.name}
+                        onClick={() => updateCustomization('potColor', color.id)}
+                      >
+                        <span style={{ backgroundColor: color.main }} />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="customize-group">
+                  <span className="customize-label">Aksesori</span>
+                  <div className="accessory-options">
+                    {accessories.map((item) => (
+                      <button
+                        key={item.id}
+                        className={`accessory-option${(garden.accessory || 'none') === item.id ? ' selected' : ''}`}
+                        type="button"
+                        aria-pressed={(garden.accessory || 'none') === item.id}
+                        onClick={() => updateCustomization('accessory', item.id)}
+                      >
+                        <span aria-hidden="true">{item.emoji}</span>{item.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <button
+                  className={`face-toggle${garden.faceEnabled !== false ? ' selected' : ''}`}
+                  type="button"
+                  aria-pressed={garden.faceEnabled !== false}
+                  onClick={() => updateCustomization('faceEnabled', garden.faceEnabled === false)}
+                >
+                  <span aria-hidden="true">{garden.faceEnabled !== false ? '😊' : '🌼'}</span>
+                  {garden.faceEnabled !== false ? 'Mata & senyum aktif' : 'Tambahkan mata & senyum'}
+                </button>
+              </section>
+
+              <button
+                className={`water-button pet-button${pettingMode ? ' is-active' : ''}`}
+                type="button"
+                disabled={condition.dead}
+                aria-pressed={pettingMode}
+                onClick={() => {
+                  const nextMode = !pettingMode;
+                  setPettingMode(nextMode);
+                  setWateringMode(false);
+                  if (nextMode) showToast('Arahkan ke bunga, lalu klik untuk mengelus 🌷');
+                }}
+              >
+                <span aria-hidden="true">☝️</span>
+                <span>{condition.dead ? 'Bunganya sedang beristirahat' : pettingMode ? 'Selesai mengelus' : 'Elus bunganya'}</span>
+              </button>
 
               <div className="growth-block">
                 <div className="growth-heading"><span>Perjalanan tumbuh</span><strong>{growth} / 15 hari</strong></div>
