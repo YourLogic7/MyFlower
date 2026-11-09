@@ -1,18 +1,10 @@
-import { createClient } from '@supabase/supabase-js';
+import { getAuthenticatedUser } from '../lib/auth.js';
 import { getProgressCollection } from '../lib/mongodb.js';
 
 const flowerIds = new Set([
   'sunflower', 'rose', 'tulip', 'daisy', 'hibiscus',
   'cherry', 'lavender', 'lily', 'chrysanthemum', 'poppy',
 ]);
-
-const supabaseUrl = process.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY;
-const supabase = supabaseUrl && supabaseAnonKey
-  ? createClient(supabaseUrl, supabaseAnonKey, {
-      auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
-    })
-  : null;
 
 function isDateKey(value) {
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
@@ -37,34 +29,6 @@ function validateGarden(body) {
   };
 }
 
-async function getUserId(req, res) {
-  if (!supabase) {
-    res.status(500).json({ error: 'Autentikasi belum dikonfigurasi di server.' });
-    return null;
-  }
-
-  const authorization = req.headers.authorization;
-  const token = typeof authorization === 'string' && authorization.match(/^Bearer\s+(.+)$/i)?.[1];
-  if (!token) {
-    res.status(401).json({ error: 'Silakan masuk untuk mengakses kebun.' });
-    return null;
-  }
-
-  try {
-    const { data, error } = await supabase.auth.getUser(token);
-    if (error || typeof data.user?.id !== 'string' || !data.user.id) {
-      if (error) console.warn('Supabase rejected a progress API token.', error.message);
-      res.status(401).json({ error: 'Sesi masuk tidak valid.' });
-      return null;
-    }
-    return data.user.id;
-  } catch (error) {
-    console.warn('Supabase token verification failed.', error.message);
-    res.status(401).json({ error: 'Sesi masuk tidak valid atau sudah kedaluwarsa.' });
-    return null;
-  }
-}
-
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   if (!['GET', 'PUT', 'DELETE'].includes(req.method)) {
@@ -72,10 +36,11 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Metode tidak didukung.' });
   }
 
-  const userId = await getUserId(req, res);
-  if (!userId) return;
-
   try {
+    const user = await getAuthenticatedUser(req);
+    if (!user) return res.status(401).json({ error: 'Silakan masuk untuk mengakses kebun.' });
+
+    const userId = user.id;
     const progress = await getProgressCollection();
 
     if (req.method === 'GET') {

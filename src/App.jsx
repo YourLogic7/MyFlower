@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { supabase } from './supabase.js';
 
 const flowers = [
   { id: 'sunflower', name: 'Matahari', emoji: '🌻', petal: '#f5c64c', light: '#ffe78a', dark: '#bd7834', center: '#754b35' },
@@ -51,19 +50,36 @@ function loadLegacyGarden() {
   }
 }
 
-async function requestProgress(method, token, body, signal) {
+async function readJsonResponse(response) {
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const error = new Error(result.error || `Permintaan gagal (${response.status}).`);
+    error.status = response.status;
+    throw error;
+  }
+  return result;
+}
+
+async function requestProgress(method, body, signal) {
   const response = await fetch('/api/progress', {
     method,
     headers: {
-      Authorization: `Bearer ${token}`,
       ...(body ? { 'Content-Type': 'application/json' } : {}),
     },
     ...(body ? { body: JSON.stringify(body) } : {}),
     signal,
   });
-  const result = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(result.error || `Permintaan gagal (${response.status}).`);
-  return result;
+  return readJsonResponse(response);
+}
+
+async function requestAuth(action, body) {
+  const response = await fetch(`/api/auth/${action}`, {
+    method: body ? 'POST' : 'GET',
+    headers: body ? { 'Content-Type': 'application/json' } : {},
+    ...(body ? { body: JSON.stringify(body) } : {}),
+    cache: 'no-store',
+  });
+  return readJsonResponse(response);
 }
 
 function getCondition(garden, today) {
@@ -174,7 +190,7 @@ function Topbar({ currentDate, greeting, onSignOut }) {
 }
 
 function App() {
-  const [session, setSession] = useState(null);
+  const [user, setUser] = useState(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [garden, setGarden] = useState(null);
   const [selectedFlower, setSelectedFlower] = useState(null);
@@ -190,26 +206,16 @@ function App() {
   const [saveVersion, setSaveVersion] = useState(0);
   const [deletingGarden, setDeletingGarden] = useState(false);
   const [authMode, setAuthMode] = useState('signin');
-  const [authEmail, setAuthEmail] = useState('');
+  const [authUsername, setAuthUsername] = useState('');
   const [authPassword, setAuthPassword] = useState('');
   const [authBusy, setAuthBusy] = useState(false);
   const [authError, setAuthError] = useState('');
-  const [authMessage, setAuthMessage] = useState('');
   const toastTimer = useRef(null);
   const celebrateTimer = useRef(null);
   const savePromiseRef = useRef(null);
-  const getTokenRef = useRef(null);
   const hydrated = useRef(false);
-  const isSignedIn = Boolean(session);
-  const user = session?.user;
+  const isSignedIn = Boolean(user);
   const userId = user?.id;
-
-  const getAccessToken = useCallback(async () => {
-    const { data, error } = await supabase.auth.getSession();
-    if (error) throw error;
-    return data.session?.access_token || null;
-  }, []);
-  getTokenRef.current = getAccessToken;
 
   const showToast = useCallback((message, error = false) => {
     setToast({ message, error });
@@ -224,31 +230,21 @@ function App() {
 
   useEffect(() => {
     let active = true;
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      if (active) {
-        setSession(nextSession);
-        setIsLoaded(true);
-      }
-    });
-
-    supabase.auth.getSession().then(({ data, error }) => {
+    requestAuth('me').then((result) => {
       if (!active) return;
-      if (error) {
-        console.error('Sesi Supabase tidak dapat dimuat.', error);
-        setAuthError('Sesi masuk tidak dapat diperiksa. Muat ulang halaman untuk mencoba lagi.');
-      }
-      setSession(data.session);
+      setUser(result.user);
       setIsLoaded(true);
     }).catch((error) => {
       if (!active) return;
-      console.error('Sesi Supabase tidak dapat dimuat.', error);
-      setAuthError('Sesi masuk tidak dapat diperiksa. Muat ulang halaman untuk mencoba lagi.');
+      if (error.status !== 401) {
+        console.error('Sesi akun tidak dapat dimuat.', error);
+        setAuthError(error.message || 'Sesi masuk tidak dapat diperiksa. Muat ulang halaman untuk mencoba lagi.');
+      }
       setIsLoaded(true);
     });
 
     return () => {
       active = false;
-      subscription.unsubscribe();
     };
   }, []);
 
@@ -272,15 +268,13 @@ function App() {
 
     async function loadProgress() {
       try {
-        const token = await getTokenRef.current();
-        if (!token) throw new Error('Sesi masuk tidak tersedia. Coba masuk kembali.');
-        const result = await requestProgress('GET', token);
+        const result = await requestProgress('GET');
         let savedGarden = result.garden;
 
         if (!savedGarden) {
           const legacyGarden = loadLegacyGarden();
           if (legacyGarden && window.confirm(`Impor progres lokal “${legacyGarden.name}” ke akun ini?`)) {
-            await requestProgress('PUT', token, legacyGarden);
+            await requestProgress('PUT', legacyGarden);
             savedGarden = legacyGarden;
             try {
               localStorage.removeItem('kebun-kecil-v1');
@@ -323,9 +317,7 @@ function App() {
     setSaveStatus('saving');
     const savePromise = (async () => {
       try {
-        const token = await getTokenRef.current();
-        if (!token) throw new Error('Sesi masuk tidak tersedia. Coba masuk kembali.');
-        await requestProgress('PUT', token, garden, controller.signal);
+        await requestProgress('PUT', garden, controller.signal);
         if (!controller.signal.aborted) setSaveStatus('saved');
       } catch (error) {
         if (controller.signal.aborted) return;
@@ -364,19 +356,16 @@ function App() {
     event.preventDefault();
     setAuthBusy(true);
     setAuthError('');
-    setAuthMessage('');
 
     try {
-      const result = authMode === 'signup'
-        ? await supabase.auth.signUp({ email: authEmail.trim(), password: authPassword })
-        : await supabase.auth.signInWithPassword({ email: authEmail.trim(), password: authPassword });
-      if (result.error) throw result.error;
+      const result = await requestAuth(authMode === 'signup' ? 'register' : 'login', {
+        username: authUsername.trim(),
+        password: authPassword,
+      });
+      setUser(result.user);
       setAuthPassword('');
-      if (authMode === 'signup' && !result.data.session) {
-        setAuthMessage('Akun berhasil dibuat. Periksa email untuk mengonfirmasi pendaftaran.');
-      }
+      setAuthError('');
     } catch (error) {
-      console.error('Autentikasi Supabase gagal.', error);
       setAuthError(error.message || 'Autentikasi gagal. Coba lagi.');
     } finally {
       setAuthBusy(false);
@@ -385,10 +374,9 @@ function App() {
 
   async function signOut() {
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
+      await requestAuth('logout', {});
+      setUser(null);
     } catch (error) {
-      console.error('Tidak dapat keluar dari akun Supabase.', error);
       showToast(error.message || 'Tidak dapat keluar dari akun.', true);
     }
   }
@@ -438,9 +426,7 @@ function App() {
     setDeletingGarden(true);
     try {
       if (savePromiseRef.current) await savePromiseRef.current;
-      const token = await getTokenRef.current();
-      if (!token) throw new Error('Sesi masuk tidak tersedia. Coba masuk kembali.');
-      await requestProgress('DELETE', token);
+      await requestProgress('DELETE');
       setGarden(null);
       setSelectedFlower(null);
       setFlowerName('Bubu');
@@ -473,10 +459,7 @@ function App() {
   const wateredToday = garden?.lastWatered === today;
   const currentDate = new Intl.DateTimeFormat('id-ID', { weekday: 'short', day: 'numeric', month: 'short' }).format(new Date(`${today}T12:00:00`));
   const greeting = isSignedIn
-    ? user?.user_metadata?.first_name
-      || user?.user_metadata?.name
-      || user?.email?.split('@')[0]
-      || 'teman'
+    ? user?.username || 'teman'
     : '';
 
   let mood = 'Segar dan bahagia';
@@ -519,18 +502,17 @@ function App() {
         <section className="game-shell auth-card">
         <span className="brand-mark" aria-hidden="true">✿</span>
         <h2>Siap merawat teman kecilmu?</h2>
-        <p>{authMode === 'signup' ? 'Buat akun dengan email untuk mulai menanam dan menyimpan progres kebunmu.' : 'Masuk dengan akunmu untuk melanjutkan atau mulai menanam.'}</p>
+        <p>{authMode === 'signup' ? 'Buat nama pengguna dan kata sandi untuk mulai menanam.' : 'Masuk dengan nama pengguna dan kata sandi untuk melanjutkan.'}</p>
         <form className="auth-form" onSubmit={submitAuth}>
           <label className="name-field">
-            <span className="field-label">Email</span>
-            <span className="input-wrap"><input type="email" autoComplete="email" required value={authEmail} onChange={(event) => setAuthEmail(event.target.value)} /></span>
+            <span className="field-label">Nama pengguna</span>
+            <span className="input-wrap"><input type="text" autoComplete="username" minLength={3} maxLength={24} pattern="[A-Za-z0-9_.-]{3,24}" required value={authUsername} onChange={(event) => setAuthUsername(event.target.value)} /></span>
           </label>
           <label className="name-field">
             <span className="field-label">Kata sandi</span>
-            <span className="input-wrap"><input type="password" autoComplete={authMode === 'signup' ? 'new-password' : 'current-password'} minLength={6} required value={authPassword} onChange={(event) => setAuthPassword(event.target.value)} /></span>
+            <span className="input-wrap"><input type="password" autoComplete={authMode === 'signup' ? 'new-password' : 'current-password'} minLength={authMode === 'signup' ? 12 : undefined} required value={authPassword} onChange={(event) => setAuthPassword(event.target.value)} /></span>
           </label>
           {authError && <p className="auth-error" role="alert">{authError}</p>}
-          {authMessage && <p className="auth-success" role="status">{authMessage}</p>}
           <button className="primary-button" type="submit" disabled={authBusy}>
             {authBusy ? 'Tunggu sebentar...' : authMode === 'signup' ? 'Daftar' : 'Masuk'}
           </button>
@@ -542,7 +524,6 @@ function App() {
           onClick={() => {
             setAuthMode((mode) => mode === 'signin' ? 'signup' : 'signin');
             setAuthError('');
-            setAuthMessage('');
           }}
         >
           {authMode === 'signup' ? 'Sudah punya akun? Masuk' : 'Belum punya akun? Daftar'}
