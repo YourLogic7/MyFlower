@@ -838,19 +838,25 @@ function App() {
                 </div>
                 <div className="customize-group">
                   <span className="customize-label">Aksesori</span>
-                  <div className="accessory-options">
-                    {accessories.map((item) => (
-                      <button
-                        key={item.id}
-                        className={`accessory-option${(garden.accessory || 'none') === item.id ? ' selected' : ''}`}
-                        type="button"
-                        aria-pressed={(garden.accessory || 'none') === item.id}
-                        onClick={() => updateCustomization('accessory', item.id)}
-                      >
-                        <span aria-hidden="true">{item.emoji}</span>{item.name}
-                      </button>
-                    ))}
-                  </div>
+                  {condition.age >= 2 ? (
+                    <div className="accessory-options">
+                      {accessories.map((item) => (
+                        <button
+                          key={item.id}
+                          className={`accessory-option${(garden.accessory || 'none') === item.id ? ' selected' : ''}`}
+                          type="button"
+                          aria-pressed={(garden.accessory || 'none') === item.id}
+                          onClick={() => updateCustomization('accessory', item.id)}
+                        >
+                          <span aria-hidden="true">{item.emoji}</span>{item.name}
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="customize-locked" role="status">
+                      <span aria-hidden="true">🔒</span> Aksesori terbuka saat tunas mulai terlihat.
+                    </p>
+                  )}
                 </div>
                 <button
                   className={`face-toggle${garden.faceEnabled !== false ? ' selected' : ''}`}
