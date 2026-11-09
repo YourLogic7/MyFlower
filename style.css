@@ -74,8 +74,12 @@ button { cursor: pointer; }
 
 .garden-view { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(280px, .85fr); gap: 20px; }
 .garden-main { min-width: 0; }
-.scene { height: 288px; position: relative; overflow: hidden; display: grid; place-items: center; border-radius: 13px; border: 1px solid #e6eee0; background: linear-gradient(180deg, #eaf5ee 0%, #f5f5e8 77%, #f0efdc 100%); }
+.scene { height: 360px; position: relative; overflow: hidden; display: grid; place-items: center; border-radius: 13px; border: 1px solid #e6eee0; background: linear-gradient(180deg, #eaf5ee 0%, #f5f5e8 77%, #f0efdc 100%); }
+.scene > * { pointer-events: none; }
+.scene > .flower-art { pointer-events: auto; }
 .scene::before { content: ''; position: absolute; inset: auto -7% -54px; height: 108px; border-radius: 50% 50% 0 0; background: #d6e5cb; }
+.scene.is-watering { cursor: url('/watering-can.svg') 8 14, crosshair; box-shadow: inset 0 0 0 2px rgba(71, 120, 89, .22); }
+.scene.celebrate::after { content: '💦'; position: absolute; z-index: 3; left: calc(50% + 43px); top: 36%; pointer-events: none; font-size: 38px; animation: water-splash .85s ease-out both; }
 .scene-sun { position: absolute; width: 33px; height: 33px; right: 44px; top: 30px; border-radius: 50%; background: #f6d990; box-shadow: 0 0 0 8px rgba(249, 218, 147, .18); animation: sun-glow 3s ease-in-out infinite; }
 .scene-cloud { position: absolute; width: 43px; height: 11px; border-radius: 12px; background: rgba(255,255,255,.66); }
 .scene-cloud::before, .scene-cloud::after { content: ''; position: absolute; bottom: 3px; border-radius: 50%; background: inherit; }
@@ -86,11 +90,14 @@ button { cursor: pointer; }
 .scene-sparkle { position: absolute; color: #e4bb63; animation: twinkle 2.4s ease-in-out infinite; }
 .sparkle-one { top: 78px; left: 24%; font-size: 13px; }
 .sparkle-two { top: 114px; right: 23%; font-size: 18px; animation-delay: .9s; }
-.flower-art { position: relative; z-index: 1; width: 168px; height: 168px; margin-top: 8px; animation: bob 2.8s ease-in-out infinite; image-rendering: pixelated; }
+.flower-art { position: relative; z-index: 1; display: block; width: 224px; height: 224px; margin-top: 8px; padding: 0; border: 0; color: inherit; background: transparent; cursor: inherit; animation: bob 2.8s ease-in-out infinite; image-rendering: pixelated; }
+.flower-art:disabled { opacity: 1; }
+.flower-art.is-watering { outline: 2px dashed rgba(71, 120, 89, .5); outline-offset: 7px; border-radius: 12px; }
+.watering-hint { position: absolute; z-index: 3; top: 16px; left: 50%; transform: translateX(-50%); padding: 8px 12px; border: 1px solid rgba(71, 120, 89, .16); border-radius: 20px; color: #426d4c; background: rgba(255, 254, 250, .88); font-size: 11px; font-weight: 800; white-space: nowrap; pointer-events: none; }
 .flower-art svg { width: 100%; height: 100%; overflow: visible; shape-rendering: crispEdges; filter: drop-shadow(0 7px 3px rgba(50, 76, 47, .12)); }
 .flower-art.is-wilted { animation: droop 2s ease-in-out infinite alternate; filter: saturate(.55); transform-origin: 50% 80%; }
 .flower-art.is-dead { animation: none; filter: grayscale(.72) saturate(.4); }
-.ground { position: absolute; width: 168px; height: 18px; bottom: 35px; z-index: 0; border-radius: 50%; background: rgba(104, 139, 86, .13); }
+.ground { position: absolute; width: 205px; height: 20px; bottom: 40px; z-index: 0; border-radius: 50%; background: rgba(104, 139, 86, .13); }
 .scene-caption { position: absolute; z-index: 2; bottom: 13px; left: 0; right: 0; text-align: center; color: #71896d; font-family: 'DM Mono', monospace; font-size: 9px; letter-spacing: .4px; }
 .flower-summary { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 17px 3px 1px; }
 .mood-label { display: flex; align-items: center; gap: 6px; color: #748374; font-size: 10px; }
@@ -108,14 +115,16 @@ button { cursor: pointer; }
 .care-title h3 { margin: 3px 0 0; font-size: 13px; }
 .water-card { margin-top: 13px; padding: 12px; border-radius: 10px; background: #f4f8ef; }
 .water-card-top { display: flex; align-items: center; gap: 9px; }
-.water-drop { display: grid; place-items: center; width: 31px; height: 31px; border-radius: 9px; background: #e4f0e9; font-size: 16px; }
+.water-drop { display: grid; place-items: center; width: 31px; height: 31px; padding: 4px; border-radius: 9px; background: #e4f0e9; object-fit: contain; }
 .water-card-top div { display: flex; flex-direction: column; gap: 1px; }
 .water-card-top strong { font-size: 11px; }
 .water-card-top div span { color: #859087; font-size: 9px; }
 .water-button { width: 100%; height: 34px; margin-top: 10px; border: 0; border-radius: 7px; color: white; background: #54815d; font-size: 10px; font-weight: 800; transition: background .16s ease, transform .16s ease; }
 .water-button:hover:not(:disabled) { background: #3f704a; transform: translateY(-1px); }
 .water-button:disabled { cursor: default; color: #68816a; background: #e4eee0; }
+.water-button.is-active { background: #345b3e; box-shadow: 0 0 0 3px rgba(71, 120, 89, .14); animation: pot-ready .8s ease-in-out infinite alternate; }
 .water-button span:first-child { margin-right: 4px; }
+.water-button img { width: 17px; height: 17px; margin-right: 6px; vertical-align: middle; }
 .growth-block { margin-top: 17px; }
 .growth-heading { display: flex; justify-content: space-between; gap: 7px; color: #748076; font-size: 10px; }
 .growth-heading strong { color: #45684b; font-family: 'DM Mono', monospace; font-size: 9px; font-weight: 500; }
@@ -165,6 +174,8 @@ button { cursor: pointer; }
 @keyframes drift { to { translate: 10px 0; } }
 @keyframes twinkle { 50% { opacity: .35; transform: scale(.8) rotate(25deg); } }
 @keyframes pop { 0% { transform: scale(.8); opacity: 0; } 75% { transform: scale(1.12); } 100% { transform: scale(1); opacity: 1; } }
+@keyframes water-splash { 0% { opacity: 0; transform: scale(.45) translateY(12px); } 25% { opacity: 1; } 100% { opacity: 0; transform: scale(1.2) translateY(-34px); } }
+@keyframes pot-ready { to { box-shadow: 0 0 0 5px rgba(71, 120, 89, .08); } }
 .celebrate .flower-art { animation: pop .55s ease-out, bob 2.8s .55s ease-in-out infinite; }
 .celebrate .scene-sparkle { animation-duration: .65s; }
 
@@ -175,7 +186,9 @@ button { cursor: pointer; }
   .intro { padding: 40px 0 27px; }
   .game-shell { padding: 22px 19px 18px; }
   .garden-view { grid-template-columns: 1fr; }
-  .scene { height: 270px; }
+  .scene { height: 330px; }
+  .flower-art { width: 205px; height: 205px; }
+  .ground { width: 190px; }
   .care-panel { min-height: 0; }
   .reset-button { margin-top: 13px; }
 }
@@ -196,8 +209,9 @@ button { cursor: pointer; }
   .setup-footer { align-items: stretch; flex-direction: column; }
   .primary-button { width: 100%; }
   .tiny-note { line-height: 1.5; }
-  .scene { height: 252px; }
-  .flower-art { width: 154px; height: 154px; }
+  .scene { height: 310px; }
+  .flower-art { width: 185px; height: 185px; }
+  .ground { width: 170px; }
   .footer { flex-direction: column; align-items: center; text-align: center; }
 }
 @media (prefers-reduced-motion: reduce) {

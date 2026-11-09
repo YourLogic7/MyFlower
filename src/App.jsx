@@ -195,6 +195,7 @@ function App() {
   const [garden, setGarden] = useState(null);
   const [selectedFlower, setSelectedFlower] = useState(null);
   const [flowerName, setFlowerName] = useState('Bubu');
+  const [wateringMode, setWateringMode] = useState(false);
   const [today, setToday] = useState(localDateKey);
   const [toast, setToast] = useState(null);
   const [celebrating, setCelebrating] = useState(false);
@@ -376,6 +377,7 @@ function App() {
     try {
       await requestAuth('logout', {});
       setUser(null);
+      setWateringMode(false);
     } catch (error) {
       showToast(error.message || 'Tidak dapat keluar dari akun.', true);
     }
@@ -392,6 +394,7 @@ function App() {
       lastWatered: date,
       waterDates: [date],
     });
+    setWateringMode(false);
     showToast(`${name} sudah ditanam dan mendapat siraman pertama! Yuk tumbuh bersama 🌱💧`);
   }
 
@@ -401,6 +404,7 @@ function App() {
     if (condition.dead) return;
     if (garden.lastWatered === today) {
       showToast('Cukup satu kali sehari—bungamu sudah kenyang air! 💧');
+      setWateringMode(false);
       return;
     }
 
@@ -410,6 +414,7 @@ function App() {
       waterDates: current.waterDates.includes(today) ? current.waterDates : [...current.waterDates, today],
     }));
     setCelebrating(true);
+    setWateringMode(false);
     window.clearTimeout(celebrateTimer.current);
     celebrateTimer.current = window.setTimeout(() => setCelebrating(false), 800);
     showToast(`Yay! ${garden.name} jadi segar lagi berkat kamu 💧`);
@@ -428,6 +433,7 @@ function App() {
       if (savePromiseRef.current) await savePromiseRef.current;
       await requestProgress('DELETE');
       setGarden(null);
+      setWateringMode(false);
       setSelectedFlower(null);
       setFlowerName('Bubu');
       setSaveVersion(0);
@@ -610,15 +616,22 @@ function App() {
         ) : (
           <div className="garden-view">
             <div className="garden-main">
-              <div className={`scene${celebrating ? ' celebrate' : ''}`}>
+              <div className={`scene${celebrating ? ' celebrate' : ''}${wateringMode ? ' is-watering' : ''}`}>
                 <div className="scene-sun" aria-hidden="true" />
                 <div className="scene-cloud cloud-one" aria-hidden="true" />
                 <div className="scene-cloud cloud-two" aria-hidden="true" />
                 <span className="scene-sparkle sparkle-one" aria-hidden="true">✦</span>
                 <span className="scene-sparkle sparkle-two" aria-hidden="true">✧</span>
-                <div className={`flower-art${condition.wilted ? ' is-wilted' : ''}${condition.dead ? ' is-dead' : ''}`}>
+                {wateringMode && <span className="watering-hint">Klik bunganya untuk menyiram</span>}
+                <button
+                  className={`flower-art${condition.wilted ? ' is-wilted' : ''}${condition.dead ? ' is-dead' : ''}${wateringMode ? ' is-watering' : ''}`}
+                  type="button"
+                  disabled={!wateringMode}
+                  aria-label={`Siram ${garden.name}`}
+                  onClick={waterFlower}
+                >
                   <PixelFlower flower={flower} stage={stage} condition={condition} />
-                </div>
+                </button>
                 <div className="ground" />
                 <div className="scene-caption">{sceneCaption}</div>
               </div>
@@ -642,11 +655,22 @@ function App() {
               </div>
               <div className="water-card">
                 <div className="water-card-top">
-                  <span className="water-drop" aria-hidden="true">💧</span>
-                  <div><strong>Waktunya minum!</strong><span>{condition.dead ? 'Saatnya menanam bunga baru' : wateredToday ? 'Terima kasih sudah merawatnya ♡' : condition.wilted ? 'Dia sangat haus, siram sekarang!' : 'Siram agar tetap ceria'}</span></div>
+                  <img className="water-drop" src="/watering-can.svg" alt="" />
+                  <div><strong>{wateringMode ? 'Pot siram siap!' : 'Waktunya minum!'}</strong><span>{wateringMode ? 'Klik bunganya di gambar' : condition.dead ? 'Saatnya menanam bunga baru' : wateredToday ? 'Terima kasih sudah merawatnya ♡' : condition.wilted ? 'Dia sangat haus, siram sekarang!' : 'Siram agar tetap ceria'}</span></div>
                 </div>
-                <button className="water-button" type="button" disabled={wateredToday || condition.dead} onClick={waterFlower}>
-                  <span aria-hidden="true">💧</span> <span>{condition.dead ? 'Bunganya sudah beristirahat' : wateredToday ? 'Sudah disiram hari ini!' : 'Siram bungaku'}</span>
+                <button
+                  className={`water-button${wateringMode ? ' is-active' : ''}`}
+                  type="button"
+                  disabled={!wateringMode && (wateredToday || condition.dead)}
+                  aria-pressed={wateringMode}
+                  onClick={() => {
+                    const nextMode = !wateringMode;
+                    setWateringMode(nextMode);
+                    if (nextMode) showToast('Klik bunganya untuk menyiram 💧');
+                  }}
+                >
+                  <img src="/watering-can.svg" alt="" />
+                  <span>{condition.dead ? 'Bunganya sudah beristirahat' : wateredToday ? 'Sudah disiram hari ini!' : wateringMode ? 'Batalkan menyiram' : 'Ambil pot siram'}</span>
                 </button>
               </div>
 
