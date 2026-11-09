@@ -245,7 +245,8 @@ function App() {
   const [wateringMode, setWateringMode] = useState(false);
   const [pettingMode, setPettingMode] = useState(false);
   const [petting, setPetting] = useState(false);
-  const [today, setToday] = useState(localDateKey);
+  const [currentTime, setCurrentTime] = useState(() => new Date());
+  const [today, setToday] = useState(() => localDateKey());
   const [toast, setToast] = useState(null);
   const [celebrating, setCelebrating] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -276,8 +277,19 @@ function App() {
   }, []);
 
   useEffect(() => {
-    const interval = window.setInterval(() => setToday(localDateKey()), 60000);
-    return () => window.clearInterval(interval);
+    const updateTime = () => {
+      const now = new Date();
+      setCurrentTime(now);
+      setToday(localDateKey(now));
+    };
+    const interval = window.setInterval(updateTime, 60000);
+    window.addEventListener('focus', updateTime);
+    document.addEventListener('visibilitychange', updateTime);
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener('focus', updateTime);
+      document.removeEventListener('visibilitychange', updateTime);
+    };
   }, []);
 
   useEffect(() => {
@@ -553,6 +565,7 @@ function App() {
   const condition = garden ? getCondition(garden, today) : null;
   const stage = condition?.dead ? 'dead' : condition?.age >= 14 ? 'bloom' : condition?.age >= 5 ? 'bud' : condition?.age >= 2 ? 'sprout' : 'seed';
   const wateredToday = garden?.lastWatered === today;
+  const isNight = currentTime.getHours() < 6 || currentTime.getHours() >= 18;
   const currentDate = new Intl.DateTimeFormat('id-ID', { weekday: 'short', day: 'numeric', month: 'short' }).format(new Date(`${today}T12:00:00`));
   const greeting = isSignedIn
     ? user?.username || 'teman'
@@ -707,15 +720,23 @@ function App() {
           <div className="garden-view">
             <div className="garden-main">
               <div
-                className={`scene${celebrating ? ' celebrate' : ''}${wateringMode ? ' is-watering' : ''}${pettingMode ? ' is-petting' : ''}${petting ? ' petting' : ''}`}
+                className={`scene${isNight ? ' time-night' : ' time-day'}${celebrating ? ' celebrate' : ''}${wateringMode ? ' is-watering' : ''}${pettingMode ? ' is-petting' : ''}${petting ? ' petting' : ''}`}
                 onPointerMove={trackFlowerPointer}
                 onPointerLeave={resetFlowerGaze}
               >
                 <div className="scene-sun" aria-hidden="true" />
+                <div className="scene-moon" aria-hidden="true">☾</div>
                 <div className="scene-cloud cloud-one" aria-hidden="true" />
                 <div className="scene-cloud cloud-two" aria-hidden="true" />
                 <span className="scene-sparkle sparkle-one" aria-hidden="true">✦</span>
                 <span className="scene-sparkle sparkle-two" aria-hidden="true">✧</span>
+                {isNight && (
+                  <>
+                    <span className="scene-star star-one" aria-hidden="true">✦</span>
+                    <span className="scene-star star-two" aria-hidden="true">✧</span>
+                    <span className="scene-star star-three" aria-hidden="true">·</span>
+                  </>
+                )}
                 {(wateringMode || pettingMode) && (
                   <span className="watering-hint">{wateringMode ? 'Klik bunganya untuk menyiram' : 'Arahkan kursor, lalu elus bunganya'}</span>
                 )}
@@ -736,7 +757,7 @@ function App() {
                   )}
                 </button>
                 <div className="ground" />
-                <div className="scene-caption">{sceneCaption}</div>
+                <div className="scene-caption"><span aria-hidden="true">{isNight ? '☾' : '☀'}</span> {isNight ? 'Malam' : 'Siang'} · {sceneCaption}</div>
               </div>
               <div className="flower-summary">
                 <div>
