@@ -73,10 +73,11 @@ button { cursor: pointer; }
 .tiny-note span { color: #dca855; margin-right: 4px; }
 
 .garden-view { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(280px, .85fr); gap: 20px; }
-.garden-main { min-width: 0; }
-.scene { height: 420px; position: relative; overflow: hidden; display: grid; place-items: center; border-radius: 13px; border: 1px solid #e6eee0; background: linear-gradient(180deg, #eaf5ee 0%, #f5f5e8 77%, #f0efdc 100%); transition: background .8s ease, border-color .8s ease, box-shadow .25s ease; }
+.garden-main { min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+.scene { height: auto; min-height: 420px; flex: 1; position: relative; overflow: hidden; display: grid; place-items: center; border-radius: 13px; border: 1px solid #e6eee0; background: linear-gradient(180deg, #eaf5ee 0%, #f5f5e8 77%, #f0efdc 100%); transition: background .8s ease, border-color .8s ease, box-shadow .25s ease; }
 .scene > * { pointer-events: none; }
 .scene > .flower-art { pointer-events: auto; }
+.scene > .flower-summary { pointer-events: auto; }
 .scene::before { content: ''; position: absolute; inset: auto -7% -54px; height: 108px; border-radius: 50% 50% 0 0; background: #d6e5cb; }
 .scene.is-watering { cursor: url('/watering-can.svg') 8 14, crosshair; box-shadow: inset 0 0 0 2px rgba(71, 120, 89, .22); }
 .scene.is-petting { cursor: url('/petting-hand.svg') 12 2, pointer; box-shadow: inset 0 0 0 2px rgba(71, 120, 89, .18); }
@@ -119,8 +120,8 @@ button { cursor: pointer; }
 .flower-art.is-wilted { animation: droop 2s ease-in-out infinite alternate; filter: saturate(.55); transform-origin: 50% 80%; }
 .flower-art.is-dead { animation: none; filter: grayscale(.72) saturate(.4); }
 .ground { position: absolute; width: 205px; height: 20px; bottom: 40px; z-index: 0; border-radius: 50%; background: rgba(104, 139, 86, .13); }
-.scene-caption { position: absolute; z-index: 2; bottom: 13px; left: 0; right: 0; text-align: center; color: #71896d; font-family: 'DM Mono', monospace; font-size: 9px; letter-spacing: .4px; }
-.flower-summary { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 17px 3px 1px; }
+.scene-caption { position: absolute; z-index: 2; bottom: 102px; left: 0; right: 0; text-align: center; color: #71896d; font-family: 'DM Mono', monospace; font-size: 9px; letter-spacing: .4px; }
+.flower-summary { position: absolute; z-index: 4; right: 14px; bottom: 12px; left: 14px; display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid rgba(233, 231, 220, .85); border-radius: 10px; background: rgba(255, 254, 250, .91); box-shadow: 0 4px 15px rgba(38, 61, 51, .08); backdrop-filter: blur(7px); }
 .mood-label { display: flex; align-items: center; gap: 6px; color: #748374; font-size: 10px; }
 .mood-dot { width: 7px; height: 7px; border-radius: 50%; background: #7fb176; box-shadow: 0 0 0 3px #e9f2e5; }
 .mood-dot.wilted { background: #dda34e; box-shadow: 0 0 0 3px #f7efd9; }
@@ -238,7 +239,8 @@ button { cursor: pointer; }
   .intro { padding: 40px 0 27px; }
   .game-shell { padding: 22px 19px 18px; }
   .garden-view { grid-template-columns: 1fr; }
-  .scene { height: 390px; }
+  .garden-main { display: block; }
+  .scene { height: 390px; min-height: 390px; flex: none; }
   .flower-art { width: 270px; height: 270px; }
   .ground { width: 190px; }
   .care-panel { min-height: 0; }
@@ -261,7 +263,7 @@ button { cursor: pointer; }
   .setup-footer { align-items: stretch; flex-direction: column; }
   .primary-button { width: 100%; }
   .tiny-note { line-height: 1.5; }
-  .scene { height: 360px; }
+  .scene { height: 360px; min-height: 360px; }
   .flower-art { width: 245px; height: 245px; }
   .ground { width: 170px; }
   .footer { flex-direction: column; align-items: center; text-align: center; }

@@ -758,17 +758,17 @@ function App() {
                 </button>
                 <div className="ground" />
                 <div className="scene-caption"><span aria-hidden="true">{isNight ? '☾' : '☀'}</span> {isNight ? 'Malam' : 'Siang'} · {sceneCaption}</div>
-              </div>
-              <div className="flower-summary">
-                <div>
-                  <div className="mood-label">
-                    <span className={`mood-dot${condition.dead ? ' dead' : condition.wilted ? ' wilted' : ''}`} />
-                    <span>{mood}</span>
+                <div className="flower-summary">
+                  <div>
+                    <div className="mood-label">
+                      <span className={`mood-dot${condition.dead ? ' dead' : condition.wilted ? ' wilted' : ''}`} />
+                      <span>{mood}</span>
+                    </div>
+                    <h3>{garden.name}</h3>
+                    <p>{flower.name} · hari ke-{condition.age + 1}</p>
                   </div>
-                  <h3>{garden.name}</h3>
-                  <p>{flower.name} · hari ke-{condition.age + 1}</p>
+                  <button className="text-button" type="button" aria-label="Ganti nama bunga" onClick={renameFlower}>✎ ganti nama</button>
                 </div>
-                <button className="text-button" type="button" aria-label="Ganti nama bunga" onClick={renameFlower}>✎ ganti nama</button>
               </div>
             </div>
 
