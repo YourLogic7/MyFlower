@@ -37,6 +37,8 @@ button { cursor: pointer; }
 .top-note { display: flex; align-items: center; gap: 8px; }
 .online-dot { width: 7px; height: 7px; border-radius: 50%; background: #83b27e; box-shadow: 0 0 0 3px #e6efe1; }
 .day-chip { font-family: 'DM Mono', monospace; background: #eeece2; border-radius: 20px; padding: 8px 12px; }
+.topbar-right { display: flex; align-items: center; gap: 10px; }
+.account-greeting { color: #718174; font-size: 10px; }
 .intro { padding: 48px 0 34px; text-align: center; }
 .eyebrow, .section-kicker, .field-label { font-family: 'DM Mono', monospace; font-size: 9px; letter-spacing: 1.15px; color: #829781; }
 .eyebrow { color: #64866d; font-weight: 500; }
@@ -132,6 +134,20 @@ button { cursor: pointer; }
 .daily-tip p { margin: 0; color: #8c8069; font-size: 9px; line-height: 1.5; }
 .reset-button { align-self: flex-start; margin: auto 0 0; padding: 11px 0 0; border: 0; background: transparent; color: #9b9e91; font-size: 9px; text-decoration: underline; text-decoration-color: #d7d8ce; text-underline-offset: 3px; }
 .reset-button:hover { color: #9f6458; }
+.reset-button:disabled { cursor: wait; }
+.save-status { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 12px; color: #789078; font-size: 9px; }
+.save-status.saving { color: #a47e43; }
+.save-status.error { color: #a15e54; }
+.save-status button { padding: 0; border: 0; color: inherit; background: transparent; font-size: inherit; text-decoration: underline; }
+.auth-card { display: flex; flex-direction: column; align-items: center; padding: 38px 20px; text-align: center; }
+.auth-card h2 { margin: 14px 0 6px; font-size: 19px; }
+.auth-card p, .auth-message p { max-width: 430px; margin: 0 auto 18px; color: #7d897e; font-size: 12px; line-height: 1.6; }
+.auth-card > span { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 12px; color: #fff; background: var(--green); font-size: 25px; }
+.auth-card .primary-button { width: 220px; }
+.auth-message { margin: 35px auto; padding: 25px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); color: #738174; text-align: center; font-size: 12px; }
+.auth-message h2 { margin: 0 0 9px; color: var(--ink); font-size: 19px; }
+.auth-message code { padding: 2px 5px; border-radius: 4px; background: #f0f2e9; font-size: 11px; }
+.error-message .primary-button { min-width: 130px; }
 .toast { position: fixed; z-index: 5; left: 50%; bottom: 28px; max-width: calc(100vw - 32px); padding: 12px 18px; border-radius: 12px; color: #fff; background: #345b3e; box-shadow: 0 8px 24px rgba(36, 67, 43, .2); font-size: 12px; opacity: 0; pointer-events: none; transform: translate(-50%, 10px); transition: .24s ease; }
 .toast.visible { opacity: 1; transform: translate(-50%, 0); }
 .toast.error { background: #965c50; }
@@ -161,6 +177,7 @@ button { cursor: pointer; }
 @media (max-width: 480px) {
   .page-shell { padding: 0 12px 18px; }
   .day-chip { font-size: 9px; padding: 7px 9px; }
+  .account-greeting { display: none; }
   .intro { padding: 34px 0 24px; }
   .intro p { max-width: 290px; margin: auto; line-height: 1.6; }
   .game-shell { padding: 19px 13px 16px; }
