@@ -1,10 +1,18 @@
-import { verifyToken } from '@clerk/backend';
+import { createClient } from '@supabase/supabase-js';
 import { getProgressCollection } from '../lib/mongodb.js';
 
 const flowerIds = new Set([
   'sunflower', 'rose', 'tulip', 'daisy', 'hibiscus',
   'cherry', 'lavender', 'lily', 'chrysanthemum', 'poppy',
 ]);
+
+const supabaseUrl = process.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY;
+const supabase = supabaseUrl && supabaseAnonKey
+  ? createClient(supabaseUrl, supabaseAnonKey, {
+      auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
+    })
+  : null;
 
 function isDateKey(value) {
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
@@ -30,7 +38,7 @@ function validateGarden(body) {
 }
 
 async function getUserId(req, res) {
-  if (!process.env.CLERK_SECRET_KEY) {
+  if (!supabase) {
     res.status(500).json({ error: 'Autentikasi belum dikonfigurasi di server.' });
     return null;
   }
@@ -43,14 +51,15 @@ async function getUserId(req, res) {
   }
 
   try {
-    const claims = await verifyToken(token, { secretKey: process.env.CLERK_SECRET_KEY });
-    if (typeof claims.sub !== 'string' || !claims.sub) {
+    const { data, error } = await supabase.auth.getUser(token);
+    if (error || typeof data.user?.id !== 'string' || !data.user.id) {
+      if (error) console.warn('Supabase rejected a progress API token.', error.message);
       res.status(401).json({ error: 'Sesi masuk tidak valid.' });
       return null;
     }
-    return claims.sub;
+    return data.user.id;
   } catch (error) {
-    console.warn('Clerk rejected a progress API token.', error.message);
+    console.warn('Supabase token verification failed.', error.message);
     res.status(401).json({ error: 'Sesi masuk tidak valid atau sudah kedaluwarsa.' });
     return null;
   }

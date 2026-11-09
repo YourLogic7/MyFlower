@@ -9,8 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@clerk/backend": "^3.27.0",
-    "@clerk/react": "^6.18.6",
+    "@supabase/supabase-js": "^2.119.0",
     "mongodb": "^7.8.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"

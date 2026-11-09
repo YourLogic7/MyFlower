@@ -2,7 +2,7 @@
 
 Game mini merawat satu bunga dengan ilustrasi pixel-art, dibuat dengan React
 dan Vite. Pilih bunga, beri nama, lalu siram satu kali setiap hari. Game
-menyimpan progres per akun di MongoDB Atlas. Clerk menangani login dan
+menyimpan progres per akun di MongoDB Atlas. Supabase Auth menangani login dan
 registrasi.
 
 ## Pengembangan
@@ -10,7 +10,7 @@ registrasi.
 ```sh
 npm install
 cp .env.example .env.local
-# Isi nilai Clerk dan MongoDB di .env.local
+# Isi nilai Supabase dan MongoDB di .env.local
 npx vercel dev
 ```
 
@@ -23,23 +23,25 @@ di folder `dist/`.
 
 ## Konfigurasi akun dan database
 
-1. Buat aplikasi Clerk dan salin publishable key serta secret key.
+1. Buat proyek Supabase dan salin Project URL serta anon key dari pengaturan API proyek.
 2. Buat cluster MongoDB Atlas dan database user dengan akses ke database game.
 3. Isi variabel berikut di `.env.local` untuk pengembangan lokal dan di Vercel
    **Project Settings → Environment Variables** untuk deployment:
 
-   - `VITE_CLERK_PUBLISHABLE_KEY`
-   - `CLERK_SECRET_KEY`
+   - `VITE_SUPABASE_URL`
+   - `VITE_SUPABASE_ANON_KEY`
    - `MONGODB_URI`
    - `MONGODB_DB` (opsional, default `kebun_kecil`)
 
-4. Tambahkan domain Vercel aplikasi sebagai domain yang diizinkan di Clerk,
-   lalu deploy ulang setelah mengatur environment variables.
+4. Atur Site URL dan URL aplikasi Vercel di Supabase **Authentication → URL Configuration**,
+   lalu deploy ulang setelah mengatur environment variables. Pendaftaran dapat
+   memerlukan konfirmasi email sesuai pengaturan Supabase.
 
-Secret key Clerk dan URI MongoDB hanya digunakan server; jangan pernah
-menambahkan nilainya ke kode frontend atau commit file `.env.local`. Jika browser
-memiliki progres dari versi sebelumnya, game akan menawarkan untuk mengimpornya
-ke akun yang pertama kali digunakan.
+Anon key Supabase memang digunakan di frontend, tetapi URI MongoDB hanya
+digunakan server. Jangan pernah menambahkan kredensial database ke kode frontend
+atau commit file `.env.local`. Jika browser memiliki progres dari versi
+sebelumnya, game akan menawarkan untuk mengimpornya ke akun yang pertama kali
+digunakan.
 
 ## Aturan permainan
 

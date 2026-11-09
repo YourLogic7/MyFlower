@@ -143,7 +143,12 @@ button { cursor: pointer; }
 .auth-card h2 { margin: 14px 0 6px; font-size: 19px; }
 .auth-card p, .auth-message p { max-width: 430px; margin: 0 auto 18px; color: #7d897e; font-size: 12px; line-height: 1.6; }
 .auth-card > span { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 12px; color: #fff; background: var(--green); font-size: 25px; }
-.auth-card .primary-button { width: 220px; }
+.auth-form { width: min(100%, 320px); display: flex; flex-direction: column; gap: 12px; text-align: left; }
+.auth-form .primary-button { width: 100%; }
+.auth-form .auth-error, .auth-form .auth-success { margin: 0; font-size: 11px; }
+.auth-form .auth-error { color: #a15e54; }
+.auth-form .auth-success { color: #477859; }
+.auth-toggle { margin-top: 12px; }
 .auth-message { margin: 35px auto; padding: 25px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); color: #738174; text-align: center; font-size: 12px; }
 .auth-message h2 { margin: 0 0 9px; color: var(--ink); font-size: 19px; }
 .auth-message code { padding: 2px 5px; border-radius: 4px; background: #f0f2e9; font-size: 11px; }

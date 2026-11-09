@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { SignInButton, UserButton, useAuth, useUser } from '@clerk/react';
+import { supabase } from './supabase.js';
 
 const flowers = [
   { id: 'sunflower', name: 'Matahari', emoji: '🌻', petal: '#f5c64c', light: '#ffe78a', dark: '#bd7834', center: '#754b35' },
@@ -156,7 +156,7 @@ function PixelFlower({ flower, stage, condition }) {
   );
 }
 
-function Topbar({ currentDate, greeting }) {
+function Topbar({ currentDate, greeting, onSignOut }) {
   return (
     <header className="topbar">
       <a className="brand" href="#" aria-label="Kebun Kecil, beranda">
@@ -166,7 +166,7 @@ function Topbar({ currentDate, greeting }) {
       <div className="top-note"><span className="online-dot" /> kebunmu, ruang kecil untuk tumbuh</div>
       <div className="topbar-right">
         {greeting && <span className="account-greeting">Hai, {greeting}</span>}
-        {greeting && <UserButton />}
+        {greeting && <button className="text-button" type="button" onClick={onSignOut}>Keluar</button>}
         <div className="day-chip" aria-live="polite">{currentDate}</div>
       </div>
     </header>
@@ -174,8 +174,8 @@ function Topbar({ currentDate, greeting }) {
 }
 
 function App() {
-  const { isLoaded, isSignedIn, userId, getToken } = useAuth();
-  const { user } = useUser();
+  const [session, setSession] = useState(null);
+  const [isLoaded, setIsLoaded] = useState(false);
   const [garden, setGarden] = useState(null);
   const [selectedFlower, setSelectedFlower] = useState(null);
   const [flowerName, setFlowerName] = useState('Bubu');
@@ -189,12 +189,27 @@ function App() {
   const [saveStatus, setSaveStatus] = useState('saved');
   const [saveVersion, setSaveVersion] = useState(0);
   const [deletingGarden, setDeletingGarden] = useState(false);
+  const [authMode, setAuthMode] = useState('signin');
+  const [authEmail, setAuthEmail] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
+  const [authBusy, setAuthBusy] = useState(false);
+  const [authError, setAuthError] = useState('');
+  const [authMessage, setAuthMessage] = useState('');
   const toastTimer = useRef(null);
   const celebrateTimer = useRef(null);
   const savePromiseRef = useRef(null);
-  const getTokenRef = useRef(getToken);
+  const getTokenRef = useRef(null);
   const hydrated = useRef(false);
-  getTokenRef.current = getToken;
+  const isSignedIn = Boolean(session);
+  const user = session?.user;
+  const userId = user?.id;
+
+  const getAccessToken = useCallback(async () => {
+    const { data, error } = await supabase.auth.getSession();
+    if (error) throw error;
+    return data.session?.access_token || null;
+  }, []);
+  getTokenRef.current = getAccessToken;
 
   const showToast = useCallback((message, error = false) => {
     setToast({ message, error });
@@ -205,6 +220,36 @@ function App() {
   useEffect(() => {
     const interval = window.setInterval(() => setToday(localDateKey()), 60000);
     return () => window.clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      if (active) {
+        setSession(nextSession);
+        setIsLoaded(true);
+      }
+    });
+
+    supabase.auth.getSession().then(({ data, error }) => {
+      if (!active) return;
+      if (error) {
+        console.error('Sesi Supabase tidak dapat dimuat.', error);
+        setAuthError('Sesi masuk tidak dapat diperiksa. Muat ulang halaman untuk mencoba lagi.');
+      }
+      setSession(data.session);
+      setIsLoaded(true);
+    }).catch((error) => {
+      if (!active) return;
+      console.error('Sesi Supabase tidak dapat dimuat.', error);
+      setAuthError('Sesi masuk tidak dapat diperiksa. Muat ulang halaman untuk mencoba lagi.');
+      setIsLoaded(true);
+    });
+
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
@@ -315,6 +360,39 @@ function App() {
     setSaveStatus('saving');
   }
 
+  async function submitAuth(event) {
+    event.preventDefault();
+    setAuthBusy(true);
+    setAuthError('');
+    setAuthMessage('');
+
+    try {
+      const result = authMode === 'signup'
+        ? await supabase.auth.signUp({ email: authEmail.trim(), password: authPassword })
+        : await supabase.auth.signInWithPassword({ email: authEmail.trim(), password: authPassword });
+      if (result.error) throw result.error;
+      setAuthPassword('');
+      if (authMode === 'signup' && !result.data.session) {
+        setAuthMessage('Akun berhasil dibuat. Periksa email untuk mengonfirmasi pendaftaran.');
+      }
+    } catch (error) {
+      console.error('Autentikasi Supabase gagal.', error);
+      setAuthError(error.message || 'Autentikasi gagal. Coba lagi.');
+    } finally {
+      setAuthBusy(false);
+    }
+  }
+
+  async function signOut() {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+    } catch (error) {
+      console.error('Tidak dapat keluar dari akun Supabase.', error);
+      showToast(error.message || 'Tidak dapat keluar dari akun.', true);
+    }
+  }
+
   function plantFlower() {
     const name = flowerName.trim().slice(0, 18);
     if (!selectedFlower || !name) return;
@@ -395,7 +473,10 @@ function App() {
   const wateredToday = garden?.lastWatered === today;
   const currentDate = new Intl.DateTimeFormat('id-ID', { weekday: 'short', day: 'numeric', month: 'short' }).format(new Date(`${today}T12:00:00`));
   const greeting = isSignedIn
-    ? user?.firstName || user?.primaryEmailAddress?.emailAddress?.split('@')[0] || 'teman'
+    ? user?.user_metadata?.first_name
+      || user?.user_metadata?.name
+      || user?.email?.split('@')[0]
+      || 'teman'
     : '';
 
   let mood = 'Segar dan bahagia';
@@ -438,23 +519,47 @@ function App() {
         <section className="game-shell auth-card">
         <span className="brand-mark" aria-hidden="true">✿</span>
         <h2>Siap merawat teman kecilmu?</h2>
-        <p>Buat akun atau masuk untuk mulai menanam dan menyimpan progres kebunmu.</p>
-        <SignInButton mode="modal" withSignUp>
-          <button className="primary-button" type="button">Masuk atau daftar <span aria-hidden="true">→</span></button>
-        </SignInButton>
+        <p>{authMode === 'signup' ? 'Buat akun dengan email untuk mulai menanam dan menyimpan progres kebunmu.' : 'Masuk dengan akunmu untuk melanjutkan atau mulai menanam.'}</p>
+        <form className="auth-form" onSubmit={submitAuth}>
+          <label className="name-field">
+            <span className="field-label">Email</span>
+            <span className="input-wrap"><input type="email" autoComplete="email" required value={authEmail} onChange={(event) => setAuthEmail(event.target.value)} /></span>
+          </label>
+          <label className="name-field">
+            <span className="field-label">Kata sandi</span>
+            <span className="input-wrap"><input type="password" autoComplete={authMode === 'signup' ? 'new-password' : 'current-password'} minLength={6} required value={authPassword} onChange={(event) => setAuthPassword(event.target.value)} /></span>
+          </label>
+          {authError && <p className="auth-error" role="alert">{authError}</p>}
+          {authMessage && <p className="auth-success" role="status">{authMessage}</p>}
+          <button className="primary-button" type="submit" disabled={authBusy}>
+            {authBusy ? 'Tunggu sebentar...' : authMode === 'signup' ? 'Daftar' : 'Masuk'}
+          </button>
+        </form>
+        <button
+          className="text-button auth-toggle"
+          type="button"
+          disabled={authBusy}
+          onClick={() => {
+            setAuthMode((mode) => mode === 'signin' ? 'signup' : 'signin');
+            setAuthError('');
+            setAuthMessage('');
+          }}
+        >
+          {authMode === 'signup' ? 'Sudah punya akun? Masuk' : 'Belum punya akun? Daftar'}
+        </button>
         </section>
       </main>
     );
   }
 
   if (loading || loadedUserId !== userId) {
-    return <main className="page-shell"><Topbar currentDate={currentDate} greeting={greeting} /><div className="auth-message">Memuat progres akunmu...</div></main>;
+    return <main className="page-shell"><Topbar currentDate={currentDate} greeting={greeting} onSignOut={signOut} /><div className="auth-message">Memuat progres akunmu...</div></main>;
   }
 
   if (loadError) {
     return (
       <main className="page-shell">
-        <Topbar currentDate={currentDate} greeting={greeting} />
+        <Topbar currentDate={currentDate} greeting={greeting} onSignOut={signOut} />
         <section className="game-shell auth-message error-message">
         <h2>Progres belum bisa dimuat</h2>
         <p>{loadError}</p>
@@ -466,7 +571,7 @@ function App() {
 
   return (
     <main className="page-shell">
-      <Topbar currentDate={currentDate} greeting={greeting} />
+      <Topbar currentDate={currentDate} greeting={greeting} onSignOut={signOut} />
 
       <section className="intro">
         <div className="eyebrow"><span aria-hidden="true">✦</span> TAMAN MINI PRIBADIMU</div>
