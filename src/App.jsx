@@ -245,6 +245,7 @@ function App() {
   const [wateringMode, setWateringMode] = useState(false);
   const [pettingMode, setPettingMode] = useState(false);
   const [petting, setPetting] = useState(false);
+  const [pouring, setPouring] = useState(false);
   const [currentTime, setCurrentTime] = useState(() => new Date());
   const [today, setToday] = useState(() => localDateKey());
   const [toast, setToast] = useState(null);
@@ -264,7 +265,10 @@ function App() {
   const toastTimer = useRef(null);
   const celebrateTimer = useRef(null);
   const petTimer = useRef(null);
+  const pouringTimer = useRef(null);
   const flowerArtRef = useRef(null);
+  const wateringStreamRef = useRef(null);
+  const waterJetRef = useRef(null);
   const savePromiseRef = useRef(null);
   const hydrated = useRef(false);
   const isSignedIn = Boolean(user);
@@ -409,6 +413,7 @@ function App() {
     window.clearTimeout(toastTimer.current);
     window.clearTimeout(celebrateTimer.current);
     window.clearTimeout(petTimer.current);
+    window.clearTimeout(pouringTimer.current);
   }, []);
 
   function markGardenChanged(nextGarden) {
@@ -421,7 +426,32 @@ function App() {
     markGardenChanged((current) => ({ ...current, [key]: value }));
   }
 
+  function drawWaterStream(event) {
+    const stream = wateringStreamRef.current;
+    const scene = event.currentTarget instanceof Element && event.currentTarget.closest('.scene');
+    const overFlower = event.target instanceof Element && event.target.closest('.flower-art');
+    if (!wateringMode || !overFlower || !stream || !scene) {
+      if (stream) stream.dataset.targeted = 'false';
+      return;
+    }
+
+    const sceneBounds = scene.getBoundingClientRect();
+    const flowerBounds = flowerArtRef.current?.getBoundingClientRect();
+    if (!flowerBounds) return;
+    const x1 = event.clientX - sceneBounds.left;
+    const y1 = event.clientY - sceneBounds.top + 8;
+    const x2 = flowerBounds.left + flowerBounds.width / 2 - sceneBounds.left;
+    const y2 = flowerBounds.top + flowerBounds.height * 0.47 - sceneBounds.top;
+    const curveX = (x1 + x2) / 2 + 5;
+    const curveY = (y1 + y2) / 2;
+
+    stream.setAttribute('viewBox', `0 0 ${sceneBounds.width} ${sceneBounds.height}`);
+    waterJetRef.current?.setAttribute('d', `M ${x1} ${y1} Q ${curveX} ${curveY} ${x2} ${y2}`);
+    stream.dataset.targeted = 'true';
+  }
+
   function trackFlowerPointer(event) {
+    drawWaterStream(event);
     const flowerArt = flowerArtRef.current;
     if (!flowerArt) return;
     const bounds = flowerArt.getBoundingClientRect();
@@ -434,10 +464,12 @@ function App() {
   function resetFlowerGaze() {
     flowerArtRef.current?.style.setProperty('--look-x', '0px');
     flowerArtRef.current?.style.setProperty('--look-y', '0px');
+    if (wateringStreamRef.current) wateringStreamRef.current.dataset.targeted = 'false';
   }
 
-  function interactWithFlower() {
+  function interactWithFlower(event) {
     if (wateringMode) {
+      if (event.detail > 0) drawWaterStream(event);
       waterFlower();
       return;
     }
@@ -502,23 +534,29 @@ function App() {
     if (!garden) return;
     const condition = getCondition(garden, today);
     if (condition.dead) return;
-    if (garden.lastWatered === today) {
-      showToast('Cukup satu kali sehari—bungamu sudah kenyang air! 💧');
-      setWateringMode(false);
-      return;
-    }
+    const alreadyWateredToday = garden.lastWatered === today;
 
-    markGardenChanged((current) => ({
-      ...current,
-      lastWatered: today,
-      waterDates: current.waterDates.includes(today) ? current.waterDates : [...current.waterDates, today],
-    }));
+    setPouring(true);
+    window.clearTimeout(pouringTimer.current);
+    pouringTimer.current = window.setTimeout(() => {
+      setPouring(false);
+      if (wateringStreamRef.current) wateringStreamRef.current.dataset.targeted = 'false';
+    }, 900);
+    if (!alreadyWateredToday) {
+      markGardenChanged((current) => ({
+        ...current,
+        lastWatered: today,
+        waterDates: current.waterDates.includes(today) ? current.waterDates : [...current.waterDates, today],
+      }));
+    }
     setCelebrating(true);
     setWateringMode(false);
     setPettingMode(false);
     window.clearTimeout(celebrateTimer.current);
     celebrateTimer.current = window.setTimeout(() => setCelebrating(false), 800);
-    showToast(`Yay! ${garden.name} jadi segar lagi berkat kamu 💧`);
+    showToast(alreadyWateredToday
+      ? `${garden.name} sudah cukup air hari ini, tapi tetap senang disiram lagi 💧`
+      : `Yay! ${garden.name} jadi segar lagi berkat kamu 💧`);
   }
 
   async function resetGarden() {
@@ -757,6 +795,15 @@ function App() {
                   )}
                 </button>
                 <div className="ground" />
+                <svg
+                  ref={wateringStreamRef}
+                  className={`watering-stream${pouring ? ' is-pouring' : ''}`}
+                  viewBox="0 0 1 1"
+                  preserveAspectRatio="none"
+                  aria-hidden="true"
+                >
+                  <path ref={waterJetRef} />
+                </svg>
                 <div className="scene-caption"><span aria-hidden="true">{isNight ? '☾' : '☀'}</span> {isNight ? 'Malam' : 'Siang'} · {sceneCaption}</div>
               </div>
               <div className="flower-summary">
@@ -780,12 +827,12 @@ function App() {
               <div className="water-card">
                 <div className="water-card-top">
                   <img className="water-drop" src="/watering-can.svg" alt="" />
-                  <div><strong>{wateringMode ? 'Pot siram siap!' : 'Waktunya minum!'}</strong><span>{wateringMode ? 'Klik bunganya di gambar' : condition.dead ? 'Saatnya menanam bunga baru' : wateredToday ? 'Terima kasih sudah merawatnya ♡' : condition.wilted ? 'Dia sangat haus, siram sekarang!' : 'Siram agar tetap ceria'}</span></div>
+                  <div><strong>{wateringMode ? 'Pot siram siap!' : wateredToday ? 'Sudah disiram hari ini!' : 'Waktunya minum!'}</strong><span>{wateringMode ? 'Klik bunganya di gambar' : condition.dead ? 'Saatnya menanam bunga baru' : wateredToday ? 'Satu kali sehari cukup, tapi boleh menyiram lagi.' : condition.wilted ? 'Dia sangat haus, siram sekarang!' : 'Siram agar tetap ceria'}</span></div>
                 </div>
                 <button
                   className={`water-button${wateringMode ? ' is-active' : ''}`}
                   type="button"
-                  disabled={!wateringMode && (wateredToday || condition.dead)}
+                  disabled={condition.dead}
                   aria-pressed={wateringMode}
                   onClick={() => {
                     const nextMode = !wateringMode;
@@ -795,7 +842,7 @@ function App() {
                   }}
                 >
                   <img src="/watering-can.svg" alt="" />
-                  <span>{condition.dead ? 'Bunganya sudah beristirahat' : wateredToday ? 'Sudah disiram hari ini!' : wateringMode ? 'Batalkan menyiram' : 'Ambil pot siram'}</span>
+                  <span>{condition.dead ? 'Bunganya sudah beristirahat' : wateringMode ? 'Batalkan menyiram' : wateredToday ? 'Siram lagi' : 'Ambil pot siram'}</span>
                 </button>
               </div>
 

@@ -110,6 +110,10 @@ button { cursor: pointer; }
 .flower-art.is-watering { outline: 2px dashed rgba(71, 120, 89, .5); outline-offset: 7px; border-radius: 12px; }
 .flower-art.is-petting { outline: 2px dashed rgba(71, 120, 89, .38); outline-offset: 7px; border-radius: 12px; }
 .flower-art.just-petted { animation: laugh-bounce .42s ease-in-out 2; }
+.watering-stream { position: absolute; z-index: 3; inset: 0; width: 100%; height: 100%; overflow: visible; opacity: 0; pointer-events: none; transition: opacity .12s ease; }
+.watering-stream[data-targeted="true"], .watering-stream.is-pouring { opacity: 1; }
+.watering-stream path { fill: none; stroke: #70d5ec; stroke-width: 4; stroke-linecap: round; stroke-dasharray: 1 7; filter: drop-shadow(0 1px 2px rgba(37, 127, 153, .4)); animation: water-flow .34s linear infinite; }
+.watering-stream.is-pouring path { stroke-width: 6; stroke-dasharray: 2 6; animation-duration: .16s; }
 .watering-hint { position: absolute; z-index: 3; top: 16px; left: 50%; transform: translateX(-50%); padding: 8px 12px; border: 1px solid rgba(71, 120, 89, .16); border-radius: 20px; color: #426d4c; background: rgba(255, 254, 250, .88); font-size: 11px; font-weight: 800; white-space: nowrap; pointer-events: none; }
 .flower-art svg { width: 100%; height: 100%; overflow: visible; shape-rendering: crispEdges; filter: drop-shadow(0 7px 3px rgba(50, 76, 47, .12)); }
 .eye-pupil { transform: translate(var(--look-x, 0), var(--look-y, 0)); transition: transform .12s ease-out; }
@@ -225,6 +229,7 @@ button { cursor: pointer; }
 @keyframes twinkle { 50% { opacity: .35; transform: scale(.8) rotate(25deg); } }
 @keyframes pop { 0% { transform: scale(.8); opacity: 0; } 75% { transform: scale(1.12); } 100% { transform: scale(1); opacity: 1; } }
 @keyframes water-splash { 0% { opacity: 0; transform: scale(.45) translateY(12px); } 25% { opacity: 1; } 100% { opacity: 0; transform: scale(1.2) translateY(-34px); } }
+@keyframes water-flow { to { stroke-dashoffset: -16; } }
 @keyframes pot-ready { to { box-shadow: 0 0 0 5px rgba(71, 120, 89, .08); } }
 @keyframes laugh-bounce { 0%, 100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-8px) rotate(-2deg); } }
 @keyframes reaction-pop { 0% { opacity: 0; transform: translate(-50%, 8px) scale(.8); } 20%, 70% { opacity: 1; transform: translate(-50%, 0) scale(1); } 100% { opacity: 0; transform: translate(-50%, -8px) scale(1.08); } }
